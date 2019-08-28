@@ -38,17 +38,17 @@ forkedMain opts = void (block forkedMain' opts)
 -- | Set a 'watchDog' on this thread, and then continue on with whatever.
 forkedMain' :: Options -> MVar String -> IO ThreadId
 forkedMain' opts mvar = forked' (interpreterSession (checkImport opts)
-                            >> return "Done.") opts mvar
+                            >> return "Done.") (timeLimit opts) mvar
           where checkImport x = if noImports x then x{modules=Nothing} else x
 
 -- | Set a 'watchDog' on this thread, and then fork/run the IO function.
-forked' :: (IO a) -> Options -> MVar a -> IO ThreadId
-forked' f opts mvar = do mainId <- myThreadId
-                         watchDog (timeLimit opts) mainId
-                         hSetBuffering stdout NoBuffering
+forked' :: IO a -> Int -> MVar a -> IO ThreadId
+forked' f timeLimit mvar = do mainId <- myThreadId
+                              watchDog timeLimit mainId
+                              hSetBuffering stdout NoBuffering
 
-                         -- Our modules and expression are set up. Let's do stuff.
-                         forkIO $ (f >>= putMVar mvar)
-                                    `E.catch` \e -> throwTo mainId (e::SomeException)
-                                                           -- bounce exceptions to the main thread,
-                                                           -- so they are reliably printed out
+                              -- Our modules and expression are set up. Let's do stuff.
+                              forkIO $ (f >>= putMVar mvar)
+                                         `E.catch` \e -> throwTo mainId (e::SomeException)
+                                                                -- bounce exceptions to the main thread,
+                                                                -- so they are reliably printed out
