@@ -41,6 +41,10 @@ forkedMain' opts mvar = forked' (interpreterSession (checkImport opts)
                             >> return "Done.") (timeLimit opts) mvar
           where checkImport x = if noImports x then x{modules=Nothing} else x
 
+-- | Set a 'watchDog' on this thread, fork the IO function, and block until it completes.
+forked :: IO a -> Int -> IO a
+forked f timeLimit = block (forked' f) timeLimit
+
 -- | Set a 'watchDog' on this thread, and then fork/run the IO function.
 forked' :: IO a -> Int -> MVar a -> IO ThreadId
 forked' f timeLimit mvar = do mainId <- myThreadId
